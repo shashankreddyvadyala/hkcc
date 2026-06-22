@@ -1,6 +1,6 @@
 # HKCC — Heat-Kernel Context Compression
 
-[![CI](https://github.com/svadyala/hkcc/actions/workflows/ci.yml/badge.svg)](https://github.com/svadyala/hkcc/actions/workflows/ci.yml) [![PyPI](https://img.shields.io/pypi/v/hkcc.svg)](https://pypi.org/project/hkcc/) [![Python](https://img.shields.io/pypi/pyversions/hkcc.svg)](https://pypi.org/project/hkcc/) [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![CI](https://github.com/shashankreddyvadyala/hkcc/actions/workflows/ci.yml/badge.svg)](https://github.com/shashankreddyvadyala/hkcc/actions/workflows/ci.yml) [![PyPI](https://img.shields.io/pypi/v/hkcc.svg)](https://pypi.org/project/hkcc/) [![Python](https://img.shields.io/pypi/pyversions/hkcc.svg)](https://pypi.org/project/hkcc/) [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 **Training-free context compression for token-efficient LLM inference — text, documents, and images.**
 
@@ -118,7 +118,7 @@ If you run it, **please open an issue/PR with your numbers.**
 ## Develop
 
 ```bash
-git clone https://github.com/svadyala/hkcc && cd hkcc
+git clone https://github.com/shashankreddyvadyala/hkcc && cd hkcc
 pip install -e ".[dev]"
 pytest -q
 ```

@@ -3,7 +3,7 @@
 The package is built and validated. The name `hkcc` is currently free on PyPI.
 
 ## 0. One-time edit
-If your GitHub username isn't `svadyala`, update the URLs in `pyproject.toml`
+If your GitHub username isn't `shashankreddyvadyala`, update the URLs in `pyproject.toml`
 (and the links in `README.md` / the website) before publishing.
 
 ## 1. Build (already done; rerun after any change)

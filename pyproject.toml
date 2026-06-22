@@ -36,10 +36,10 @@ all = ["pypdf>=4", "python-docx>=1", "sentence-transformers>=2.2"]
 dev = ["pytest>=7", "build>=1", "twine>=5"]
 
 [project.urls]
-Homepage = "https://github.com/svadyala/hkcc"
-Repository = "https://github.com/svadyala/hkcc"
-Issues = "https://github.com/svadyala/hkcc/issues"
-Paper = "https://github.com/svadyala/hkcc/blob/main/paper/hkcc.pdf"
+Homepage = "https://github.com/shashankreddyvadyala/hkcc"
+Repository = "https://github.com/shashankreddyvadyala/hkcc"
+Issues = "https://github.com/shashankreddyvadyala/hkcc/issues"
+Paper = "https://github.com/shashankreddyvadyala/hkcc/blob/main/paper/hkcc.pdf"
 
 [tool.setuptools.packages.find]
 where = ["src"]
