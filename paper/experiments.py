@@ -21,7 +21,9 @@ plt.rcParams.update({
 ACC = "#B5651D"
 COLS = {"random": "#9aa0a6", "stride": "#5f6368", "heat_prune": "#1a73e8",
         "heat_merge": "#B5651D", "kmeans": "#188038", "rand_merge": "#c5221f"}
-FIG = "/home/claude/paper/figs"
+import os
+FIG = os.path.join(os.path.dirname(os.path.abspath(__file__)), "figs")
+os.makedirs(FIG, exist_ok=True)
 
 # ------------------------------------------------------------------ helpers
 def normalize(X):

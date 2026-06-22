@@ -1,0 +1,8 @@
+N=340 d=64 t_star=0.960 residual_ratio=1.42
+fid@8 {'random': 0.8386, 'stride': 0.8832, 'heat_prune': 0.3376, 'heat_merge': 0.9997}
+fid@12 {'random': 0.8934, 'stride': 0.9259, 'heat_prune': 0.6525, 'heat_merge': 0.9997}
+cheby@K24 1.15e-15
+best_t@8=1.93
+energy_lowest20pct=69.8
+runtime cheby 1.55e-03->4.10e-02; exact@1024=3.91e-01
+ablation@10 {'rand_merge': (np.float64(0.9994), np.float64(0.0003)), 'kmeans': (np.float64(0.9994), np.float64(0.0003)), 'heat_merge': (np.float64(0.9997), np.float64(0.0001))}

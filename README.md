@@ -129,7 +129,7 @@ pytest -q
 @misc{vadyala2026hkcc,
   title  = {Heat-Kernel Context Compression: Continuous-Time Diffusion for Token-Efficient
             Language-Model Inference},
-  author = {Vadyala, Shashank Reddy},
+  author = {Vadyala, Shashank Reddy and Betgeri, Sai Nethra},
   year   = {2026},
 }
 ```
