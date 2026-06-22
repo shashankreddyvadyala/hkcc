@@ -1,0 +1,45 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hkcc"
+version = "0.2.0"
+description = "Heat-Kernel Context Compression: training-free, modality-agnostic context compression for token-efficient LLM inference."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [{ name = "Shashank Reddy Vadyala", email = "vadyala.shashankreddy@gmail.com" }]
+keywords = ["llm", "rag", "context-compression", "token-compression", "kv-cache",
+            "graph-signal-processing", "heat-kernel", "efficient-inference", "multimodal"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Text Processing :: General",
+]
+dependencies = ["numpy>=1.22", "scipy>=1.8"]
+
+[project.optional-dependencies]
+documents = ["pypdf>=4", "python-docx>=1"]
+embeddings = ["sentence-transformers>=2.2"]
+all = ["pypdf>=4", "python-docx>=1", "sentence-transformers>=2.2"]
+dev = ["pytest>=7", "build>=1", "twine>=5"]
+
+[project.urls]
+Homepage = "https://github.com/svadyala/hkcc"
+Repository = "https://github.com/svadyala/hkcc"
+Issues = "https://github.com/svadyala/hkcc/issues"
+Paper = "https://github.com/svadyala/hkcc/blob/main/paper/hkcc.pdf"
+
+[tool.setuptools.packages.find]
+where = ["src"]

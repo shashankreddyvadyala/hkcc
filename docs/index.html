@@ -1,0 +1,649 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HKCC — Heat-Kernel Context Compression</title>
+<meta name="description" content="Training-free context compression for token-efficient LLM inference — text, documents, and images. Keep what's distinctive, re-express the rest.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F5F7F9; --surface:#FFFFFF; --ink:#15181E; --ink-soft:#5A636F;
+    --line:#E2E6EC; --line-strong:#CBD2DB;
+    --blue:#16315C; --blue-bright:#2E63D6;
+    --heat-0:#3A2410; --heat-1:#B5651D; --heat-2:#E7A45E;
+    --display:"Space Grotesk",system-ui,sans-serif;
+    --body:"Inter",system-ui,sans-serif;
+    --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);
+    font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased;
+  }
+  a{color:var(--blue);text-decoration:none}
+  a:hover{color:var(--blue-bright)}
+  :focus-visible{outline:2px solid var(--blue-bright);outline-offset:3px;border-radius:3px}
+  .wrap{max-width:1100px;margin:0 auto;padding:0 28px}
+  .eyebrow{
+    font-family:var(--mono);font-size:11.5px;font-weight:600;letter-spacing:.18em;
+    text-transform:uppercase;color:#995213;margin:0 0 18px;
+  }
+
+  /* ---------- nav ---------- */
+  nav{position:sticky;top:0;z-index:20;background:rgba(245,247,249,.82);
+      backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+  .nav{display:flex;align-items:center;justify-content:space-between;height:62px}
+  .brand{font-family:var(--mono);font-weight:600;letter-spacing:.04em;color:var(--ink);font-size:15px}
+  .brand b{color:var(--heat-1)}
+  .nav-links{display:flex;gap:26px;align-items:center;font-size:14px}
+  .nav-links a{color:var(--ink-soft)}
+  .nav-links a:hover{color:var(--ink)}
+  .nav-cta{font-family:var(--mono);font-size:13px;border:1px solid var(--line-strong);
+           padding:7px 14px;border-radius:7px;color:var(--ink)}
+  .nav-cta:hover{border-color:var(--blue-bright);color:var(--blue-bright)}
+  @media(max-width:720px){.nav-links a:not(.nav-cta){display:none}}
+
+  /* ---------- hero ---------- */
+  .hero{display:grid;grid-template-columns:1.05fr .95fr;gap:54px;align-items:center;
+        padding:72px 0 60px}
+  h1{font-family:var(--display);font-weight:700;font-size:clamp(34px,5vw,54px);
+     line-height:1.04;letter-spacing:-.02em;margin:0 0 22px}
+  h1 .warm{color:var(--heat-1)}
+  .lede{font-size:18px;color:var(--ink-soft);max-width:34ch;margin:0 0 30px}
+  .install{display:flex;align-items:center;gap:10px;background:var(--ink);color:#EAEEF3;
+           font-family:var(--mono);font-size:14px;padding:13px 16px;border-radius:9px;
+           width:max-content;max-width:100%;margin-bottom:24px;cursor:pointer;border:none}
+  .install .dollar{color:var(--heat-2)}
+  .install .copy{margin-left:6px;font-size:11px;color:#8d97a4;letter-spacing:.1em}
+  .install:hover .copy{color:#cfd6df}
+  .btns{display:flex;gap:12px;flex-wrap:wrap}
+  .btn{font-family:var(--mono);font-size:13.5px;padding:11px 18px;border-radius:9px;
+       border:1px solid var(--line-strong);color:var(--ink);background:var(--surface)}
+  .btn:hover{border-color:var(--blue-bright);color:var(--blue-bright)}
+  .btn.primary{background:var(--blue);color:#fff;border-color:var(--blue)}
+  .btn.primary:hover{background:var(--blue-bright);color:#fff;border-color:var(--blue-bright)}
+
+  /* ---------- viz ---------- */
+  .viz{background:var(--surface);border:1px solid var(--line);border-radius:16px;
+       padding:18px 18px 16px;box-shadow:0 1px 0 rgba(20,24,30,.02),0 18px 40px -28px rgba(20,40,80,.22)}
+  .viz canvas{width:100%;height:300px;display:block;border-radius:10px}
+  .viz-ctrl{display:flex;align-items:center;gap:14px;margin-top:14px}
+  .viz-ctrl input[type=range]{flex:1;accent-color:var(--heat-1);height:4px}
+  .viz-read{font-family:var(--mono);font-size:12.5px;color:var(--ink-soft);
+            display:flex;justify-content:space-between;margin-top:10px}
+  .viz-read b{color:var(--ink);font-weight:600}
+  .viz-read .fid{color:var(--heat-1)}
+  @media(max-width:860px){.hero{grid-template-columns:1fr;gap:40px;padding:48px 0}}
+
+  /* ---------- generic section ---------- */
+  .band{border-top:1px solid var(--line);padding:72px 0}
+  .band h2{font-family:var(--display);font-weight:600;font-size:clamp(24px,3.4vw,34px);
+           letter-spacing:-.015em;margin:0 0 16px;line-height:1.12}
+  .band p.sub{font-size:17px;color:var(--ink-soft);max-width:60ch;margin:0}
+
+  /* ---------- idea line ---------- */
+  .idea h2{max-width:18ch}
+  .idea .big{font-family:var(--display);font-weight:600;font-size:clamp(22px,3vw,30px);
+             letter-spacing:-.01em;line-height:1.25;max-width:24ch;margin:0 0 18px}
+  .idea .big .strike{color:var(--ink-soft);text-decoration:line-through;text-decoration-color:var(--line-strong)}
+  .idea .big .keep{color:var(--heat-1)}
+  .mods{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:30px}
+  .mod{border:1px solid var(--line);border-radius:11px;padding:16px 18px;background:var(--surface);
+       display:flex;flex-direction:column;gap:3px}
+  .mod .mt{font-family:var(--display);font-weight:600;font-size:16px}
+  .mod .md{font-family:var(--mono);font-size:12px;color:var(--ink-soft)}
+  @media(max-width:680px){.mods{grid-template-columns:1fr}}
+
+  /* ---------- benchmark table ---------- */
+  .bench table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:14px;margin-top:8px}
+  .bench th,.bench td{padding:13px 12px;text-align:right;border-bottom:1px solid var(--line)}
+  .bench th:first-child,.bench td:first-child{text-align:left;color:var(--ink-soft)}
+  .bench thead th{font-weight:600;color:var(--ink-soft);font-size:12px;letter-spacing:.04em;
+                  text-transform:uppercase;border-bottom:1px solid var(--line-strong)}
+  .bench .hk{color:var(--ink);font-weight:600;position:relative}
+  .bench thead .hk{color:var(--heat-1)}
+  .bench tbody tr:hover{background:#FBFCFD}
+  .bench .bar{display:inline-block;height:7px;border-radius:4px;vertical-align:middle;margin-right:8px;
+              background:linear-gradient(90deg,var(--heat-0),var(--heat-1))}
+  .bench .collapse{color:#B23A2E}
+  .note{font-size:13.5px;color:var(--ink-soft);margin-top:18px;max-width:70ch}
+
+  /* ---------- why cards ---------- */
+  .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:30px}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:13px;padding:24px}
+  .card .n{font-family:var(--mono);font-size:12px;color:var(--heat-1);letter-spacing:.08em}
+  .card h3{font-family:var(--display);font-weight:600;font-size:18px;margin:12px 0 8px}
+  .card p{font-size:14.5px;color:var(--ink-soft);margin:0}
+  @media(max-width:820px){.cards{grid-template-columns:1fr}}
+
+  /* ---------- code ---------- */
+  .code{background:#11141A;border-radius:13px;padding:22px 22px;overflow:auto;
+        font-family:var(--mono);font-size:13.5px;line-height:1.75;color:#D5DBE3;margin-top:8px}
+  .code .c{color:#7C8796}.code .k{color:#E7A45E}.code .s{color:#8FB8E8}.code .f{color:#C9A6E8}
+
+  /* ---------- status ---------- */
+  .status{background:linear-gradient(180deg,#FFFFFF, #FBF8F4);border:1px solid var(--line);
+          border-left:3px solid var(--heat-1);border-radius:13px;padding:28px 30px}
+  .status p{margin:0 0 14px;max-width:64ch}
+  .status p:last-child{margin:0}
+
+  /* ---------- cite ---------- */
+  .cite pre{background:var(--surface);border:1px solid var(--line);border-radius:11px;
+            padding:18px 20px;font-family:var(--mono);font-size:12.5px;color:var(--ink-soft);
+            overflow:auto;margin:8px 0 0;line-height:1.6}
+
+  footer{border-top:1px solid var(--line);padding:40px 0 56px;margin-top:8px}
+  .foot{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;
+        font-size:13.5px;color:var(--ink-soft)}
+  .foot a{color:var(--ink-soft)}.foot a:hover{color:var(--ink)}
+  .foot .mono{font-family:var(--mono)}
+
+  header[id],section[id]{scroll-margin-top:74px}
+  .idea-card{padding:14px}
+  .idea-card svg{width:100%;height:auto;display:block}
+  .pills{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+  .pill{flex:1;min-width:92px;border:1px solid var(--line);border-radius:9px;padding:8px 10px;background:var(--surface);cursor:pointer;transition:.22s;text-align:left}
+  .pill .pn{font-family:var(--mono);font-size:11px;color:var(--ink-soft)}
+  .pill .pl{font-family:var(--display);font-weight:600;font-size:12px;margin-top:2px;line-height:1.15}
+  .pill.active{border-color:var(--heat-1);background:#FCF6EF}
+  .pill.active .pn{color:var(--heat-1)}
+  .pill.done{border-color:var(--line-strong)} .pill.done .pn{color:var(--line-strong)}
+  #cv{width:100%;height:430px;display:block;border-radius:12px;background:#FCFDFE;border:1px solid var(--line)}
+  @media(max-width:640px){#cv{height:330px}.pill{min-width:calc(33% - 6px)}}
+  .explain{display:grid;grid-template-columns:1fr auto;gap:18px;align-items:end;margin-top:16px}
+  .stepno{font-family:var(--mono);font-size:12px;color:var(--heat-1);letter-spacing:.05em}
+  .steptitle{font-family:var(--display);font-weight:600;font-size:19px;margin:4px 0 6px}
+  .stepdesc{color:var(--ink-soft);font-size:15px;max-width:60ch;margin:0;min-height:48px}
+  .ctrls{display:flex;align-items:center;gap:8px}
+  .sbtn{font-family:var(--mono);font-size:13px;border:1px solid var(--line-strong);background:var(--surface);color:var(--ink);border-radius:8px;padding:8px 12px;cursor:pointer}
+  .sbtn:hover{border-color:var(--heat-1);color:var(--heat-1)}
+  .count{font-family:var(--mono);font-size:13px;color:var(--ink-soft);margin-top:12px}
+  .count b{color:var(--ink)} .count .fid{color:var(--heat-1)}
+  @media(max-width:640px){.explain{grid-template-columns:1fr}}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  @media(max-width:720px){.two{grid-template-columns:1fr}}
+  .concept h3{font-family:var(--display);font-weight:600;font-size:17px;margin:14px 0 6px}
+  .concept p{color:var(--ink-soft);font-size:14.5px;margin:0}
+  .concept svg{width:100%;height:auto;display:block}
+  .stat{font-family:var(--mono);font-size:13px;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
+  .stat .bad{color:#B23A2E} .stat .good{color:var(--heat-1)}
+  .props{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+  @media(max-width:720px){.props{grid-template-columns:1fr}}
+  .prop{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px 20px}
+  .prop h3{font-family:var(--display);font-weight:600;font-size:15px;margin:0 0 6px}
+  .prop p{color:var(--ink-soft);font-size:14px;margin:0}
+</style>
+</head>
+<body>
+<nav><div class="wrap nav">
+  <a class="brand" href="#top"><b>◍</b> HKCC</a>
+  <div class="nav-links">
+    <a href="#how">How it works</a>
+    <a href="#benchmark">Benchmark</a>
+    <a href="#start">Quickstart</a>
+    <a class="nav-cta" href="https://github.com/svadyala/hkcc">GitHub →</a>
+  </div>
+</div></nav>
+<header class="wrap hero" id="top">
+  <div>
+    <p class="eyebrow">Heat-Kernel Context Compression</p>
+    <h1>Keep what's distinctive.<br><span class="warm">Re-express the rest.</span></h1>
+    <p class="lede">A training-free way to shrink LLM context. Put your tokens on a graph, run the
+      heat equation, and fold redundant tokens into a few weighted centroids — sending far fewer
+      tokens while the model sees almost the same thing.</p>
+    <button class="install" id="install" aria-label="Copy install command">
+      <span class="dollar">$</span> pip install hkcc <span class="copy" id="copyhint">COPY</span>
+    </button>
+    <div class="btns">
+      <a class="btn primary" href="paper/hkcc.pdf">Read the paper</a>
+      <a class="btn" href="https://github.com/svadyala/hkcc">GitHub</a>
+      <a class="btn" href="https://pypi.org/project/hkcc/">PyPI</a>
+    </div>
+  </div>
+  <div class="viz">
+    <canvas id="diffuse" aria-label="Animation: redundant context tokens diffusing and collapsing into a few anchor tokens"></canvas>
+    <div class="viz-ctrl">
+      <span style="font-family:var(--mono);font-size:12px;color:var(--ink-soft)">fewer</span>
+      <input id="slider" type="range" min="3" max="60" value="15" aria-label="Fraction of tokens to keep">
+      <span style="font-family:var(--mono);font-size:12px;color:var(--ink-soft)">more kept</span>
+    </div>
+    <div class="viz-read">
+      <span><b id="hnin">280</b> tokens → <b id="hnout">42</b> representatives</span>
+      <span class="fid">fidelity ≈ <span id="hfid">0.999</span></span>
+    </div>
+  </div>
+</header>
+<section class="band" id="modalities"><div class="wrap">
+  <p class="eyebrow">One method, any modality</p>
+  <h2>Text, documents, and images</h2>
+  <p class="sub">HKCC only ever sees embeddings, so the same compressor spans modalities — text tokens, document chunks, or image patches.</p>
+  <div class="mods">
+    <div class="mod"><span class="mt">Text</span><span class="md">tokens & retrieved chunks</span></div>
+    <div class="mod"><span class="mt">Documents</span><span class="md">PDF · DOCX · HTML · code</span></div>
+    <div class="mod"><span class="mt">Images</span><span class="md">ViT patch tokens, position-aware</span></div>
+  </div>
+</div></section>
+<section class="band" id="how">
+    <p class="eyebrow">How it works</p>
+    <h2>The pipeline, one stage at a time</h2>
+    <p class="sub">Walk through it at your own pace — use the arrows, or let it play. Labels on the
+      canvas point at what each stage is doing.</p>
+    <div class="card">
+      <div class="pills" id="pills"></div>
+      <canvas id="cv" aria-label="Interactive step-through of the HKCC compression pipeline"></canvas>
+      <div class="explain">
+        <div>
+          <div class="stepno" id="stepno">Step 1 / 7</div>
+          <div class="steptitle" id="steptitle">Raw context</div>
+          <p class="stepdesc" id="stepdesc"></p>
+        </div>
+        <div class="ctrls">
+          <button class="sbtn" id="prev" aria-label="Previous step">←</button>
+          <button class="sbtn" id="play" aria-label="Play or pause">❚❚</button>
+          <button class="sbtn" id="next" aria-label="Next step">→</button>
+        </div>
+      </div>
+      <div class="count"><b id="nin">170</b> tokens<span id="arrow" style="opacity:0"> &nbsp;→&nbsp; <b id="nout">31</b> representatives</span><span id="fidwrap" style="opacity:0">&nbsp; · &nbsp;<span class="fid">attention preserved ≈ <span id="fid">0.99</span></span></span></div>
+    </div>
+  </section>
+<section class="band">
+    <p class="eyebrow">Why it works</p>
+    <h2>Two ideas do the heavy lifting</h2>
+    <div class="two">
+      <div class="card concept">
+        <svg viewBox="0 0 420 150" role="img" aria-label="A redundant token barely moves under diffusion; a distinctive token is pulled far.">
+          <text x="105" y="20" font-family="JetBrains Mono" font-size="11" fill="#5A636F" text-anchor="middle">REDUNDANT</text>
+          <circle cx="80" cy="70" r="7" fill="#9aa0a6"/><circle cx="110" cy="62" r="7" fill="#9aa0a6"/>
+          <circle cx="125" cy="90" r="7" fill="#9aa0a6"/><circle cx="92" cy="98" r="7" fill="#9aa0a6"/>
+          <circle cx="103" cy="78" r="8" fill="#16315C"/>
+          <path d="M103 78 l7 3" stroke="#16315C" stroke-width="2" marker-end="url(#a2)"/>
+          <text x="105" y="128" font-family="Inter" font-size="12.5" fill="#5A636F" text-anchor="middle">barely moves → low residual</text>
+          <line x1="210" y1="30" x2="210" y2="120" stroke="#E2E6EC"/>
+          <text x="320" y="20" font-family="JetBrains Mono" font-size="11" fill="#995213" text-anchor="middle">DISTINCTIVE</text>
+          <circle cx="360" cy="92" r="7" fill="#9aa0a6"/><circle cx="378" cy="78" r="7" fill="#9aa0a6"/>
+          <circle cx="370" cy="100" r="7" fill="#9aa0a6"/>
+          <circle cx="285" cy="62" r="8" fill="#B5651D"/>
+          <path d="M285 62 L355 88" stroke="#B5651D" stroke-width="2" marker-end="url(#a2)"/>
+          <text x="320" y="128" font-family="Inter" font-size="12.5" fill="#995213" text-anchor="middle">pulled hard → high residual</text>
+          <defs><marker id="a2" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.6"/></marker></defs>
+        </svg>
+        <h3>The residual is a saliency score</h3>
+        <p>Diffusion pulls every token toward the average of its neighbours. A token surrounded by
+          near-copies is already at that average, so it hardly moves — redundant. A one-of-a-kind
+          token gets dragged a long way — distinctive. The distance it travels is the score.</p>
+      </div>
+      <div class="card concept">
+        <svg viewBox="0 0 420 150" role="img" aria-label="Pruning deletes a cluster and loses its mass; merging keeps it as a weighted centroid.">
+          <text x="105" y="20" font-family="JetBrains Mono" font-size="11" fill="#B23A2E" text-anchor="middle">PRUNE — deletes</text>
+          <g opacity="0.45"><circle cx="85" cy="70" r="7" fill="#9aa0a6"/><circle cx="110" cy="62" r="7" fill="#9aa0a6"/>
+          <circle cx="123" cy="86" r="7" fill="#9aa0a6"/><circle cx="95" cy="92" r="7" fill="#9aa0a6"/></g>
+          <path d="M70 55 L135 100 M135 55 L70 100" stroke="#B23A2E" stroke-width="2"/>
+          <text x="105" y="128" font-family="Inter" font-size="12.5" fill="#B23A2E" text-anchor="middle">mass thrown away</text>
+          <line x1="210" y1="30" x2="210" y2="120" stroke="#E2E6EC"/>
+          <text x="320" y="20" font-family="JetBrains Mono" font-size="11" fill="#995213" text-anchor="middle">MERGE — summarizes</text>
+          <g opacity="0.3"><circle cx="295" cy="72" r="6" fill="#9aa0a6"/><circle cx="320" cy="64" r="6" fill="#9aa0a6"/>
+          <circle cx="335" cy="88" r="6" fill="#9aa0a6"/><circle cx="305" cy="92" r="6" fill="#9aa0a6"/></g>
+          <circle cx="318" cy="80" r="15" fill="#B5651D" opacity="0.16"/><circle cx="318" cy="80" r="10" fill="#B5651D"/>
+          <text x="320" y="128" font-family="Inter" font-size="12.5" fill="#995213" text-anchor="middle">mass kept, weighted</text>
+        </svg>
+        <h3>Merge, don't prune</h3>
+        <p>A repetitive region carries real attention mass as a group. Deleting it loses that mass and
+          accuracy falls apart. Re-expressing it as one weighted centroid keeps it — which is why this
+          one design choice is the whole game.</p>
+        <div class="stat">at 8% kept · prune-only <span class="bad">0.34</span> &nbsp;vs&nbsp; HKCC <span class="good">0.999</span></div>
+      </div>
+    </div>
+  </section>
+<section class="band bench" id="benchmark"><div class="wrap">
+  <p class="eyebrow">Benchmark · synthetic</p>
+  <h2>Near-lossless where deletion collapses</h2>
+  <p class="sub">Attention-output fidelity (cosine, higher is better) as you keep fewer tokens.
+    <span style="font-family:var(--mono);font-size:13px">prune-only</span> keeps the very same
+    distinctive tokens HKCC does — but deletes the rest.</p>
+  <table>
+    <thead><tr><th>Kept</th><th>Random</th><th>Stride</th><th>Prune-only</th><th class="hk">HKCC</th></tr></thead>
+    <tbody>
+      <tr><td>5%</td><td>0.751</td><td>0.846</td><td class="collapse">0.085</td><td class="hk"><span class="bar" style="width:60px"></span>1.000</td></tr>
+      <tr><td>8%</td><td>0.818</td><td>0.871</td><td class="collapse">0.269</td><td class="hk"><span class="bar" style="width:60px"></span>1.000</td></tr>
+      <tr><td>12%</td><td>0.864</td><td>0.919</td><td class="collapse">0.672</td><td class="hk"><span class="bar" style="width:60px"></span>1.000</td></tr>
+      <tr><td>20%</td><td>0.918</td><td>0.952</td><td>0.830</td><td class="hk"><span class="bar" style="width:60px"></span>1.000</td></tr>
+    </tbody>
+  </table>
+  <p class="note">Results are on synthetic embeddings with an attention-output proxy — they isolate
+    the mechanism, not a real-LLM score. The same holds for image patch tokens: a 0.999 fidelity
+    floor keeps ~21% of patches (~22× less attention compute). Reproduce both:
+    <span style="font-family:var(--mono)">python benchmarks/synthetic_benchmark.py</span> and
+    <span style="font-family:var(--mono)">multimodal_benchmark.py</span>.</p>
+</div></section>
+<section class="band">
+    <p class="eyebrow">What you get</p>
+    <h2>Three guarantees, for free</h2>
+    <div class="props">
+      <div class="prop"><h3>Linear time</h3><p>Diffusion runs as a Chebyshev approximation — never the matrix exponential — so cost scales with the number of tokens, not its cube.</p></div>
+      <div class="prop"><h3>Nothing invented</h3><p>Every representative is a weighted average of real tokens, so a compressed token can never take a value the context didn't contain.</p></div>
+      <div class="prop"><h3>Set a floor</h3><p>Name the fidelity you'll accept and HKCC keeps the fewest tokens that stay above it — no guessing a budget.</p></div>
+    </div>
+  </section>
+<section class="band" id="start"><div class="wrap">
+  <p class="eyebrow">Quickstart</p>
+  <h2>Compress anything you can embed</h2>
+  <div class="code"><span class="c"># pip install hkcc</span>
+<span class="k">import</span> numpy <span class="k">as</span> np
+<span class="k">from</span> hkcc <span class="k">import</span> HKCC, compress_documents, compress_vision_tokens
+
+<span class="c"># text / any embeddings — compress to a quality floor</span>
+X = np.random.randn(<span class="s">800</span>, <span class="s">64</span>)
+r = HKCC(target_fidelity=<span class="s">0.99</span>).<span class="f">compress</span>(X)
+r.representatives, r.multiplicity, r.fidelity
+
+<span class="c"># documents of any type — keep the chunks that carry distinct content</span>
+kept = <span class="f">compress_documents</span>([<span class="s">"report.pdf"</span>, <span class="s">"notes.md"</span>], budget=<span class="s">0.2</span>).kept_chunks
+
+<span class="c"># image / vision patches — position-aware merge</span>
+vis = <span class="f">compress_vision_tokens</span>(patch_embeddings, grid_hw=(<span class="s">24</span>, <span class="s">24</span>), target_fidelity=<span class="s">0.99</span>)</div>
+</div></section>
+<section class="band"><div class="wrap">
+  <p class="eyebrow">Status</p>
+  <div class="status">
+    <p><strong>This is research-stage, and that's stated plainly.</strong> The numbers above come
+      from synthetic data; they show the mechanism works but are not yet a real-LLM result.</p>
+    <p>The honest next step — and the thing that would make HKCC production-credible — is wiring it
+      into a real retrieval-QA pipeline and reporting answer quality against measured token
+      reduction. A ready-to-run harness ships in the repo:
+      <span style="font-family:var(--mono);font-size:13px">examples/rag_validation.py</span>.</p>
+    <p>If you run it on real data, <a href="https://github.com/svadyala/hkcc/issues">open an issue
+      with your numbers</a>. Real results are what this project needs most.</p>
+  </div>
+</div></section>
+<section class="band cite" id="cite"><div class="wrap">
+  <p class="eyebrow">Cite</p>
+  <h2>Use it, build on it</h2>
+  <p class="sub">HKCC is MIT-licensed. If it helps your work, a citation is appreciated.</p>
+  <pre>@misc{vadyala2026hkcc,
+  title  = {Heat-Kernel Context Compression: Continuous-Time Diffusion
+            for Token-Efficient Language-Model Inference},
+  author = {Vadyala, Shashank Reddy},
+  year   = {2026},
+}</pre>
+</div></section>
+<footer><div class="wrap foot">
+  <span>HKCC — Heat-Kernel Context Compression · <span class="mono">MIT</span></span>
+  <span><a href="#how">How it works</a> · <a href="paper/hkcc.pdf">Paper</a> · <a href="https://github.com/svadyala/hkcc">GitHub</a> · <a href="mailto:vadyala.shashankreddy@gmail.com" class="mono">contact</a></span>
+</div></footer>
+
+<script>
+
+// ---- copy install command ----
+document.getElementById('install').addEventListener('click', () => {
+  navigator.clipboard?.writeText('pip install hkcc');
+  const h = document.getElementById('copyhint'); h.textContent = 'COPIED'; h.style.color = '#E7A45E';
+  setTimeout(() => { h.textContent = 'COPY'; h.style.color = ''; }, 1400);
+});
+
+// ---- diffusion visualization ----
+(() => {
+  const canvas = document.getElementById('diffuse');
+  const ctx = canvas.getContext('2d');
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const INK = '#7C8696', BLUE = '#16315C', H1 = '#B5651D', H2 = '#E7A45E';
+  let W, H, DPR, pts = [], anchors = [], N = 0;
+
+  function rnd(a, b){ return a + Math.random() * (b - a); }
+  function gauss(){ return (Math.random()+Math.random()+Math.random()-1.5)/1.5; }
+
+  function build(){
+    const pad = 26;
+    const nClusters = 7, per = 34, outliers = 28;
+    const centers = [];
+    for (let c = 0; c < nClusters; c++) centers.push([rnd(pad, W-pad), rnd(pad, H-pad)]);
+    pts = [];
+    for (let c = 0; c < nClusters; c++){
+      for (let i = 0; i < per; i++){
+        const x = centers[c][0] + gauss()*22, y = centers[c][1] + gauss()*22;
+        const d = Math.hypot(x-centers[c][0], y-centers[c][1]);
+        pts.push({hx:x, hy:y, x, y, res: d/30 + Math.random()*0.15, a:0.85, r:2.0});
+      }
+    }
+    for (let i = 0; i < outliers; i++){
+      const x = rnd(pad, W-pad), y = rnd(pad, H-pad);
+      pts.push({hx:x, hy:y, x, y, res: 1.4 + Math.random()*0.3, a:0.85, r:2.0});
+    }
+    N = pts.length;
+    document.getElementById('hnin').textContent = N;
+  }
+
+  function recompute(keepPct){
+    const M = Math.max(2, Math.round(keepPct/100 * N));
+    const order = pts.map((p,i)=>[p.res,i]).sort((a,b)=>b[0]-a[0]);
+    const anchorIdx = new Set(order.slice(0, M).map(o=>o[1]));
+    anchors = [...anchorIdx];
+    // assign each non-anchor to nearest anchor (by home position)
+    const counts = {}; anchors.forEach(a=>counts[a]=1);
+    pts.forEach((p,i)=>{
+      p.anchor = anchorIdx.has(i);
+      if (p.anchor){ p.tx=p.hx; p.ty=p.hy; p.ta=1; }
+      else {
+        let best=anchors[0], bd=1e9;
+        for (const a of anchors){ const d=Math.hypot(p.hx-pts[a].hx, p.hy-pts[a].hy); if(d<bd){bd=d;best=a;} }
+        p.to=best; p.tx=pts[best].hx; p.ty=pts[best].hy; p.ta=0.0; counts[best]=(counts[best]||1)+1;
+        p.d0=Math.max(bd,1);
+      }
+    });
+    pts.forEach((p,i)=>{ if(p.anchor){ p.tr = 2.2 + Math.sqrt(counts[i]||1)*0.7; } else { p.tr = 0.8; } });
+    document.getElementById('hnout').textContent = M;
+    // illustrative fidelity readout: high, dips only at extreme compression
+    const f = (0.992 + 0.0079*(1 - Math.exp(-(keepPct-3)/6))).toFixed(3);
+    document.getElementById('hfid').textContent = f;
+    if (reduce) draw(true);
+  }
+
+  function draw(snap){
+    ctx.clearRect(0,0,W,H);
+    // assignment lines for still-merging points
+    ctx.lineWidth = 1;
+    for (const p of pts){
+      if (p.anchor) continue;
+      const cur = Math.hypot(p.x-p.tx, p.y-p.ty);
+      const prog = 1 - Math.min(cur/p.d0,1);
+      const la = 0.16*(1-prog);
+      if (la > 0.01){
+        ctx.strokeStyle = `rgba(124,134,150,${la})`;
+        ctx.beginPath(); ctx.moveTo(p.x,p.y); ctx.lineTo(p.tx,p.ty); ctx.stroke();
+      }
+    }
+    // points
+    for (const p of pts){
+      if (snap){ p.x=p.tx; p.y=p.ty; p.a=p.ta; p.r=p.tr; }
+      if (p.anchor){
+        ctx.beginPath(); ctx.arc(p.x,p.y,p.r+3.5,0,7); ctx.fillStyle='rgba(181,101,29,0.10)'; ctx.fill();
+        ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,7); ctx.fillStyle=H1; ctx.fill();
+      } else {
+        ctx.globalAlpha = Math.max(p.a,0.05);
+        ctx.beginPath(); ctx.arc(p.x,p.y,Math.max(p.r,0.6),0,7); ctx.fillStyle=INK; ctx.fill();
+        ctx.globalAlpha = 1;
+      }
+    }
+  }
+
+  function tick(){
+    let moving = false;
+    for (const p of pts){
+      p.x += (p.tx-p.x)*0.08; p.y += (p.ty-p.y)*0.08;
+      p.a += (p.ta-p.a)*0.08; p.r += (p.tr-p.r)*0.08;
+      if (Math.abs(p.tx-p.x)>0.3 || Math.abs(p.ta-p.a)>0.01) moving = true;
+    }
+    draw(false);
+    if (moving) requestAnimationFrame(tick);
+  }
+
+  function resize(){
+    DPR = Math.min(devicePixelRatio||1, 2);
+    W = canvas.clientWidth; H = canvas.clientHeight;
+    canvas.width = W*DPR; canvas.height = H*DPR; ctx.setTransform(DPR,0,0,DPR,0,0);
+    build(); recompute(+document.getElementById('slider').value);
+    if (reduce) draw(true); else { pts.forEach(p=>{p.x=p.hx;p.y=p.hy;p.a=0.85;p.r=2;}); requestAnimationFrame(tick); }
+  }
+
+  const slider = document.getElementById('slider');
+  let raf;
+  slider.addEventListener('input', () => {
+    recompute(+slider.value);
+    if (!reduce){ cancelAnimationFrame(raf); raf = requestAnimationFrame(tick); }
+  });
+  addEventListener('resize', () => { clearTimeout(window.__rt); window.__rt = setTimeout(resize, 150); });
+  resize();
+})();
+
+
+(() => {
+  const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const INK=[90,99,111], SLATE=[154,160,166], COPPER=[181,101,29], COPPER2=[231,164,94];
+
+  const STEPS = [
+    ["Raw context", "An LLM context is a sequence of token embeddings. In long prompts and RAG, many are near-duplicates of each other — and you pay for every one."],
+    ["Build a token graph", "Connect each token to its nearest neighbours by similarity. Redundant tokens form dense, tightly-linked clumps; distinctive tokens stay loosely connected."],
+    ["Run the heat equation", "Let heat diffuse along the graph — the same equation that spreads warmth through metal. Smooth, repetitive regions blur together fast; sharp tokens resist."],
+    ["Measure the heat residual", "Each token's residual is how far it drifted. Tokens deep in a cluster barely move (low — redundant); lone tokens get pulled hard (high — distinctive)."],
+    ["Keep the distinctive tokens", "Take the highest-residual tokens as anchors. These are the parts of the context that actually carry unique information worth keeping verbatim."],
+    ["Fold in the rest", "Don't delete the redundant tokens — that loses the mass a dense region carries. Fold each into its nearest anchor, which becomes a weighted average."],
+    ["Compressed context", "What remains is a handful of weighted representatives — far fewer tokens, same meaning. With proportional attention, the model's output barely changes."],
+  ];
+
+  // per-step property targets: [edgeA, residMix, anchorEmph, mergeProg, heat]
+  const T = [
+    [0.00,0,0,0,0],[0.50,0,0,0,0],[0.50,0,0,0,1],
+    [0.34,1,0,0,0],[0.24,1,1,0,0],[0.14,1,1,1,0],[0.00,1,1,1,0],
+  ];
+
+  let W,H,DPR,pts=[],anchors=[],edges=[],N=0,M=0,seed=0,exRed=0,exDist=0,exAnchor=0;
+  const cur = {e:0,rm:0,ae:0,mp:0};
+  let step=0, wave=0;
+
+  const rnd=(a,b)=>a+Math.random()*(b-a);
+  const g3=()=>(Math.random()+Math.random()+Math.random()-1.5)/1.5;
+  const ramp=(x,a,b)=>Math.max(0,Math.min(1,(x-a)/(b-a)));
+  const mix=(c1,c2,t)=>[c1[0]+(c2[0]-c1[0])*t,c1[1]+(c2[1]-c1[1])*t,c1[2]+(c2[2]-c1[2])*t];
+  const rgba=(c,a)=>`rgba(${c[0]|0},${c[1]|0},${c[2]|0},${a})`;
+
+  function build(){
+    const pad=40,nc=6,per=24,out=26,cen=[];
+    for(let c=0;c<nc;c++) cen.push([rnd(pad,W-pad),rnd(pad+8,H-pad-8)]);
+    pts=[];
+    for(let c=0;c<nc;c++) for(let i=0;i<per;i++){
+      const x=cen[c][0]+g3()*23,y=cen[c][1]+g3()*23;
+      pts.push({hx:x,hy:y,cx:cen[c][0],cy:cen[c][1],res:Math.hypot(x-cen[c][0],y-cen[c][1])/33+Math.random()*0.1});
+    }
+    for(let i=0;i<out;i++) pts.push({hx:rnd(pad,W-pad),hy:rnd(pad,H-pad),cx:0,cy:0,res:1.3+Math.random()*0.3});
+    N=pts.length; const mx=Math.max(...pts.map(p=>p.res)); pts.forEach(p=>p.res/=mx);
+    M=Math.round(0.18*N);
+    anchors=pts.map((p,i)=>[p.res,i]).sort((a,b)=>b[0]-a[0]).slice(0,M).map(o=>o[1]);
+    const aset=new Set(anchors),counts={}; anchors.forEach(a=>counts[a]=1);
+    pts.forEach((p,i)=>{p.anchor=aset.has(i);
+      if(!p.anchor){let best=anchors[0],bd=1e9;for(const a of anchors){const d=Math.hypot(p.hx-pts[a].hx,p.hy-pts[a].hy);if(d<bd){bd=d;best=a;}}p.to=best;counts[best]=(counts[best]||1)+1;}});
+    pts.forEach((p,i)=>p.mult=p.anchor?counts[i]:1);
+    edges=[];
+    for(let i=0;i<N;i++){const ds=pts.map((q,j)=>[Math.hypot(pts[i].hx-q.hx,pts[i].hy-q.hy),j]).sort((a,b)=>a[0]-b[0]);for(let k=1;k<=3;k++) if(ds[k]&&ds[k][1]>i) edges.push([i,ds[k][1]]);}
+    let cx=0,cy=0; pts.forEach(p=>{cx+=p.hx;cy+=p.hy;}); cx/=N;cy/=N;
+    seed=pts.map((p,i)=>[Math.hypot(p.hx-cx,p.hy-cy),i]).sort((a,b)=>a[0]-b[0])[0][1];
+    const dm=Math.max(...pts.map(p=>Math.hypot(p.hx-pts[seed].hx,p.hy-pts[seed].hy)))+1e-6;
+    pts.forEach(p=>p.dseed=Math.hypot(p.hx-pts[seed].hx,p.hy-pts[seed].hy)/dm);
+    // example points for labels
+    exDist=anchors[0];
+    exRed=pts.map((p,i)=>[p.res,i]).filter(o=>!pts[o[1]].anchor).sort((a,b)=>a[0]-b[0])[0][1];
+    exAnchor=anchors.slice().sort((a,b)=>pts[b].mult-pts[a].mult)[0];
+    document.getElementById('nin').textContent=N; document.getElementById('nout').textContent=M;
+  }
+
+  function leader(tx,ty,lx,ly,text,align){
+    ctx.strokeStyle=rgba(COPPER,0.7); ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(tx,ty); ctx.lineTo(lx,ly); ctx.stroke();
+    ctx.beginPath(); ctx.arc(tx,ty,2.5,0,7); ctx.fillStyle=rgba(COPPER,0.9); ctx.fill();
+    ctx.font='600 12px "JetBrains Mono",monospace'; ctx.fillStyle=rgba(COPPER,1);
+    ctx.textAlign=align; ctx.textBaseline='middle';
+    ctx.fillText(text, align==='end'?lx-8:lx+8, ly);
+    ctx.textAlign='left'; ctx.textBaseline='alphabetic';
+  }
+
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    const {e:edgeA,rm:residMix,ae:anchorEmph,mp:mergeP}=cur;
+    const heatOn = step===2;
+
+    if(edgeA>0.01){ctx.lineWidth=1;for(const[a,b]of edges){ctx.strokeStyle=rgba(SLATE,edgeA);ctx.beginPath();ctx.moveTo(pts[a].hx,pts[a].hy);ctx.lineTo(pts[b].hx,pts[b].hy);ctx.stroke();}}
+    if(mergeP>0.01&&mergeP<0.99){for(const p of pts){if(p.anchor)continue;const a=pts[p.to];ctx.strokeStyle=rgba(COPPER,0.13*(1-mergeP));ctx.beginPath();ctx.moveTo(p.hx+(a.hx-p.hx)*mergeP,p.hy+(a.hy-p.hy)*mergeP);ctx.lineTo(a.hx,a.hy);ctx.stroke();}}
+    if(heatOn){const r=wave*Math.hypot(W,H)*0.6,g=ctx.createRadialGradient(pts[seed].hx,pts[seed].hy,Math.max(r-45,0),pts[seed].hx,pts[seed].hy,r+45);g.addColorStop(0,'rgba(181,101,29,0)');g.addColorStop(.6,'rgba(231,164,94,0.13)');g.addColorStop(1,'rgba(181,101,29,0)');ctx.fillStyle=g;ctx.fillRect(0,0,W,H);}
+
+    for(const p of pts){
+      let x=p.hx,y=p.hy,alpha=1,r=2.4,col=INK;
+      if(residMix>0) col=mix(SLATE,mix(SLATE,COPPER,p.res),residMix);
+      if(heatOn){const gl=Math.exp(-Math.pow((p.dseed-wave)*6,2));if(gl>0.05)col=mix(col,COPPER2,gl*0.9);}
+      if(p.anchor){r=2.4+anchorEmph*(1.8+Math.sqrt(p.mult)*0.75);col=mix(col,COPPER,anchorEmph);
+        if(anchorEmph>0.05){ctx.beginPath();ctx.arc(x,y,r+5*anchorEmph,0,7);ctx.fillStyle=rgba(COPPER,0.10*anchorEmph);ctx.fill();}}
+      else{const a=pts[p.to];x=p.hx+(a.hx-p.hx)*mergeP;y=p.hy+(a.hy-p.hy)*mergeP;alpha=1-mergeP;r=2.4*(1-0.55*mergeP);}
+      ctx.globalAlpha=Math.max(alpha,0);ctx.beginPath();ctx.arc(x,y,Math.max(r,0.5),0,7);ctx.fillStyle=rgba(col,1);ctx.fill();ctx.globalAlpha=1;
+    }
+    // on-canvas annotations
+    if(step===3){
+      leader(pts[exRed].hx,pts[exRed].hy,70,28,'redundant','start');
+      leader(pts[exDist].hx,pts[exDist].hy,W-70,28,'distinctive','end');
+    } else if(step===4){
+      leader(pts[exAnchor].hx,pts[exAnchor].hy,W-70,28,'anchor — kept','end');
+    } else if(step>=5){
+      const a=pts[exAnchor];leader(a.hx,a.hy,W-70,28,'weighted centroid','end');
+    }
+  }
+
+  // UI
+  const pillbox=document.getElementById('pills');
+  STEPS.forEach((s,i)=>{const b=document.createElement('button');b.className='pill';b.innerHTML=`<div class="pn">0${i+1}</div><div class="pl">${s[0]}</div>`;b.onclick=()=>go(i,true);pillbox.appendChild(b);});
+  const pills=[...pillbox.children];
+  function setText(i){
+    pills.forEach((p,k)=>{p.classList.toggle('active',k===i);p.classList.toggle('done',k<i);});
+    document.getElementById('stepno').textContent=`Step ${i+1} / 7`;
+    document.getElementById('steptitle').textContent=STEPS[i][0];
+    document.getElementById('stepdesc').textContent=STEPS[i][1];
+    document.getElementById('arrow').style.opacity=i>=4?1:0;
+    document.getElementById('fidwrap').style.opacity=i>=6?1:0;
+    document.getElementById('fid').textContent=(i>=6?0.999:0.99).toFixed(3);
+  }
+
+  let playing=!reduce, acc=0, last=performance.now();
+  const playBtn=document.getElementById('play');
+  function go(i,manual){ step=((i%7)+7)%7; setText(step); if(manual){acc=0;} }
+  document.getElementById('next').onclick=()=>go(step+1,true);
+  document.getElementById('prev').onclick=()=>go(step-1,true);
+  playBtn.onclick=()=>{playing=!playing;playBtn.textContent=playing?'❚❚':'▶';last=performance.now();if(playing)requestAnimationFrame(loop);};
+
+  function loop(now){
+    const dt=now-last; last=now;
+    if(playing){acc+=dt; if(acc>4200){acc=0; go(step+1,false);} }
+    // ease properties toward current step targets
+    const tgt=T[step];
+    cur.e+=(tgt[0]-cur.e)*0.12; cur.rm+=(tgt[1]-cur.rm)*0.12;
+    cur.ae+=(tgt[2]-cur.ae)*0.12; cur.mp+=(tgt[3]-cur.mp)*0.10;
+    if(step===2){wave=(wave+dt/2600)%1;} 
+    draw();
+    if(playing||Math.abs(cur.mp-tgt[3])>0.001||Math.abs(cur.ae-tgt[2])>0.001||Math.abs(cur.rm-tgt[1])>0.001||Math.abs(cur.e-tgt[0])>0.001||step===2) requestAnimationFrame(loop);
+  }
+  // redraw on manual nav even when paused
+  const _go=go; go=(i,m)=>{_go(i,m); if(!playing) requestAnimationFrame(loop);};
+
+  function resize(){
+    DPR=Math.min(devicePixelRatio||1,2); W=cv.clientWidth; H=cv.clientHeight;
+    cv.width=W*DPR; cv.height=H*DPR; ctx.setTransform(DPR,0,0,DPR,0,0);
+    build();
+    if(reduce){step=6;Object.assign(cur,{e:0,rm:1,ae:1,mp:1});setText(6);draw();}
+    else{setText(step);requestAnimationFrame(loop);}
+  }
+  addEventListener('resize',()=>{clearTimeout(window.__r);window.__r=setTimeout(resize,150);});
+  resize();
+})();
+
+</script>
+</body>
+</html>
